@@ -1,0 +1,10 @@
+init ok
+run_tests decision=allow exit=0 added=0 changed=0
+verify_pass verdict=PASS reason=admissible_receipt
+verify_unbound verdict=UNVERIFIED reason=unbound_claim
+run_write decision=allow exit=0 added=1 changed=0
+run_denied decision=deny reasons=1
+apply exists=True
+undo exists=False
+verify_stale verdict=UNVERIFIED reason=stale_evidence
+doctor ok=True errors=0

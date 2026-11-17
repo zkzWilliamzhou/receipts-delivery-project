@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "receipts"
+version = "0.1.0"
+description = "Proof your AI agent actually did the work"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+keywords = ["agent", "audit", "verification", "receipts", "developer-tools"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Topic :: Software Development :: Quality Assurance",
+]
+
+[project.scripts]
+receipts = "receipts.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/YOUR_ORG/receipts"
+Issues = "https://github.com/YOUR_ORG/receipts/issues"
+
+[tool.setuptools]
+packages = ["receipts"]

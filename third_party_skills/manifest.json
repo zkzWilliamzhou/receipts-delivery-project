@@ -1,0 +1,110 @@
+{
+  "anthropics/skills": [
+    {
+      "path": "README.md",
+      "bytes": 5547
+    },
+    {
+      "path": "skills/mcp-builder/SKILL.md",
+      "bytes": 11092
+    },
+    {
+      "path": "skills/webapp-testing/SKILL.md",
+      "bytes": 3861
+    },
+    {
+      "path": "skills/frontend-design/SKILL.md",
+      "bytes": 9363
+    },
+    {
+      "path": "skills/claude-api/SKILL.md",
+      "bytes": 105119
+    },
+    {
+      "path": "template/SKILL.md",
+      "bytes": 140
+    }
+  ],
+  "mattpocock/skills": [
+    {
+      "path": "skills/engineering/codebase-design/SKILL.md",
+      "bytes": 6066
+    },
+    {
+      "path": "skills/engineering/diagnosing-bugs/SKILL.md",
+      "bytes": 8661
+    },
+    {
+      "path": "skills/engineering/code-review/SKILL.md",
+      "bytes": 6691
+    },
+    {
+      "path": "skills/engineering/to-spec/SKILL.md",
+      "bytes": 3043
+    },
+    {
+      "path": "skills/engineering/implement-spec/SKILL.md",
+      "bytes": 2835
+    },
+    {
+      "path": "skills/engineering/research/SKILL.md",
+      "bytes": 832
+    },
+    {
+      "path": "skills/misc/git-guardrails-claude-code/SKILL.md",
+      "bytes": 2313
+    }
+  ],
+  "vercel-labs/agent-skills": [
+    {
+      "path": "README.md",
+      "bytes": 7273
+    },
+    {
+      "path": "skills/writing-guidelines/SKILL.md",
+      "bytes": 1233
+    },
+    {
+      "path": "skills/web-design-guidelines/SKILL.md",
+      "bytes": 1231
+    },
+    {
+      "path": "skills/composition-patterns/SKILL.md",
+      "bytes": 2882
+    }
+  ],
+  "vercel-labs/skills": [
+    {
+      "path": "README.md",
+      "bytes": 5613
+    },
+    {
+      "path": "skills/find-skills/SKILL.md",
+      "bytes": 5456
+    }
+  ],
+  "obra/superpowers": [
+    {
+      "path": "README.md",
+      "bytes": 14835
+    }
+  ],
+  "tomerose/stop-slop": [
+    {
+      "path": "README.md",
+      "bytes": 3324
+    },
+    {
+      "path": "SKILL.md",
+      "bytes": 2944
+    },
+    {
+      "path": "references/structures.md",
+      "bytes": 5255
+    },
+    {
+      "path": "references/examples.md",
+      "bytes": 1684
+    }
+  ]
+}

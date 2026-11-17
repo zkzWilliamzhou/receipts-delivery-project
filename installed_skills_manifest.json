@@ -1,0 +1,38 @@
+{
+  "anthropics/skills": {
+    "branch": "main",
+    "directory": ".skills/anthropics__skills",
+    "total_files": 392,
+    "skill_files": 20
+  },
+  "mattpocock/skills": {
+    "branch": "main",
+    "directory": ".skills/mattpocock__skills",
+    "total_files": 183,
+    "skill_files": 39
+  },
+  "vercel-labs/agent-skills": {
+    "branch": "main",
+    "directory": ".skills/vercel-labs__agent-skills",
+    "total_files": 443,
+    "skill_files": 9
+  },
+  "vercel-labs/skills": {
+    "branch": "main",
+    "directory": ".skills/vercel-labs__skills",
+    "total_files": 210,
+    "skill_files": 5
+  },
+  "obra/superpowers": {
+    "branch": "main",
+    "directory": ".skills/obra__superpowers",
+    "total_files": 234,
+    "skill_files": 15
+  },
+  "tomerose/stop-slop": {
+    "branch": "master",
+    "directory": ".skills/tomerose__stop-slop",
+    "total_files": 12,
+    "skill_files": 1
+  }
+}

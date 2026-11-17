@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "network": {"mode": "deny", "allow_domains": []},
+  "deny_commands": [
+    "curl", "wget", "nc", "ncat", "telnet", "ftp", "ssh", "scp",
+    "git clone", "git fetch", "git push", "pip install", "npm install"
+  ],
+  "protected_paths": [
+    ".receipts", ".git", ".env", ".ssh", "id_rsa", ".pem", "credentials"
+  ],
+  "env_allowlist": [
+    "PATH", "LANG", "LC_ALL", "HOME", "TMPDIR", "PYTHONPATH",
+    "VIRTUAL_ENV", "CI", "GOFLAGS", "NODE_PATH", "CARGO_HOME", "GOPATH"
+  ],
+  "max_wall_seconds": 120,
+  "max_output_bytes": 262144,
+  "max_file_bytes": 67108864,
+  "max_files": 20000,
+  "claims": {
+    "tests pass": {
+      "kind": "command_ok",
+      "commands": [
+        "pytest", "python -m pytest", "python3 -m pytest",
+        "python -m unittest", "python3 -m unittest",
+        "go test", "npm test", "cargo test", "make test"
+      ],
+      "require_exit": 0,
+      "requires_network_isolation": false
+    },
+    "build succeeded": {
+      "kind": "command_ok",
+      "commands": ["make", "npm run build", "cargo build", "go build", "python -m build"],
+      "require_exit": 0,
+      "requires_network_isolation": false
+    },
+    "lint clean": {
+      "kind": "command_ok",
+      "commands": ["ruff check", "flake8", "eslint", "golangci-lint run"],
+      "require_exit": 0,
+      "requires_network_isolation": false
+    },
+    "no network access": {
+      "kind": "network_isolation",
+      "requires_network_isolation": true
+    }
+  }
+}

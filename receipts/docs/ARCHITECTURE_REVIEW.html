@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>receipts — architecture review</title>
+<style>
+  :root { --ink:#16181d; --paper:#f6f5f1; --line:#c9c5ba; --accent:#1d5c45; --warn:#8a4b12; --bad:#8a2431; --good:#1d5c45; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink); font:15px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  header { padding:42px 6vw 28px; border-bottom:1px solid var(--line); }
+  h1 { font-size:34px; line-height:1.1; margin:0 0 10px; letter-spacing:-.02em; }
+  .lede { max-width:760px; font-size:17px; color:#3c3f45; }
+  main { padding:30px 6vw 80px; max-width:1180px; margin:0 auto; }
+  h2 { font-size:22px; margin:42px 0 14px; }
+  h3 { font-size:17px; margin:0 0 8px; }
+  p { max-width:820px; }
+  .meta { font-size:13px; color:#5d6067; margin-top:12px; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:10px; padding:22px; margin:18px 0; box-shadow:0 1px 0 rgba(0,0,0,.04); }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  .panel { border:1px solid var(--line); border-radius:8px; padding:14px; background:#fbfaf7; }
+  .panel h4 { margin:0 0 10px; font-size:13px; letter-spacing:.08em; text-transform:uppercase; color:#5d6067; }
+  .badge { display:inline-block; font-size:12px; font-weight:700; padding:3px 9px; border-radius:999px; color:#fff; }
+  .strong { background:var(--good); }
+  .worth { background:var(--warn); }
+  .spec { background:#5d6067; }
+  .chosen { outline:3px solid var(--accent); outline-offset:2px; }
+  .tag { font-size:12px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:.08em; }
+  ul { max-width:820px; }
+  li { margin:5px 0; }
+  code { background:#eceae3; padding:1px 5px; border-radius:4px; font-size:13px; }
+  pre { background:#16181d; color:#e9e7df; padding:14px; border-radius:8px; overflow:auto; font-size:13px; }
+  .callout { border-left:4px solid var(--accent); background:#eef3ee; padding:14px 18px; margin:18px 0; }
+  .warn { border-left-color:var(--warn); background:#f7f0e6; }
+  table { border-collapse:collapse; width:100%; max-width:820px; font-size:14px; }
+  th,td { border:1px solid var(--line); padding:8px 10px; text-align:left; vertical-align:top; }
+  th { background:#eceae3; }
+  svg { width:100%; height:auto; display:block; }
+  footer { padding:24px 6vw; border-top:1px solid var(--line); font-size:13px; color:#5d6067; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Architecture review: deepen the Backend seam</h1>
+  <p class="lede">Scope before scan: the hot spot is <code>sandbox.py</code>, touched by the safety rounds. Three candidates were surfaced. One was deepened. The golden contract stayed byte-identical.</p>
+  <p class="meta">Vocabulary from <code>GLOSSARY.md</code> and <code>codebase-design</code>: module, interface, depth, seam, adapter, leverage, locality. ADR-0001 and ADR-0002 were read first; no candidate contradicts them.</p>
+</header>
+
+<main>
+  <h2>1. Where the friction was</h2>
+  <p>Before the pass, <code>sandbox.py</code> exposed <code>detect()</code> and <code>wrap()</code> over a bare string. The string was a shallow interface: callers had to know what each name meant. <code>Policy.evaluate</code> asked <code>is_enforcing(name)</code>, <code>Engine.run</code> built an <code>attempts</code> list from the name, and <code>ClaimVerifier</code> asked <code>is_enforcing(name)</code> again. Backend knowledge leaked across three seams. Applying the deletion test: deleting the module would not concentrate complexity, it would just move the same name checks into three callers.</p>
+
+  <h2>2. Candidates</h2>
+
+  <div class="card chosen">
+    <span class="tag">Top recommendation</span> <span class="badge strong">Strong</span>
+    <h3>Candidate A — Deepen <code>sandbox.py</code> into the <code>Backend</code> module</h3>
+    <p><strong>Files.</strong> <code>receipts/sandbox.py</code>, <code>receipts/policy.py</code>, <code>receipts/engine.py</code>, <code>receipts/claims.py</code>, <code>tests/test_backend.py</code>.</p>
+    <p><strong>Problem.</strong> A backend name is not a deep interface. Network isolation and filesystem containment were separate facts that no single module owned. Adding a capability meant editing four files, and the real bug hid in how callers interpreted the name, not inside a pure function.</p>
+    <p><strong>Solution.</strong> <code>Backend</code> becomes a value object with one deep interface: <code>Backend.resolve()</code>, <code>Backend.wrap(argv, workspace)</code>, <code>Backend.capabilities()</code>, <code>network_isolation</code>, <code>filesystem_containment</code>. Module-level functions stay as thin adapters. <code>Policy</code>, <code>Engine</code> and <code>ClaimVerifier</code> now deal with one object instead of a string plus scattered predicates.</p>
+    <p><strong>Benefits.</strong> Locality improves: the capability decision sits next to the command wrapping that creates it. Leverage improves: one interface now serves detection, wrapping, receipt disclosure, and strict verification. The deletion test flips: removing <code>Backend</code> would concentrate four scattered decisions into one missing module, which is the signal of a deep module. Tests exercise the built argv and the capability matrix through the public interface, not through mocks of the wrapper.</p>
+    <div class="grid">
+      <div class="panel">
+        <h4>Before</h4>
+        <svg viewBox="0 0 460 210" role="img" aria-label="Before: scattered backend name checks">
+          <rect x="10" y="80" width="90" height="46" rx="6" fill="#eceae3" stroke="#c9c5ba"/>
+          <text x="55" y="108" text-anchor="middle" font-size="13">sandbox.py</text>
+          <rect x="160" y="10" width="120" height="46" rx="6" fill="#fff" stroke="#c9c5ba"/>
+          <text x="220" y="38" text-anchor="middle" font-size="13">Policy.evaluate</text>
+          <rect x="160" y="80" width="120" height="46" rx="6" fill="#fff" stroke="#c9c5ba"/>
+          <text x="220" y="108" text-anchor="middle" font-size="13">Engine.run</text>
+          <rect x="160" y="150" width="120" height="46" rx="6" fill="#fff" stroke="#c9c5ba"/>
+          <text x="220" y="178" text-anchor="middle" font-size="13">ClaimVerifier</text>
+          <rect x="330" y="80" width="110" height="46" rx="6" fill="#f7f0e6" stroke="#8a4b12"/>
+          <text x="385" y="108" text-anchor="middle" font-size="13">name string</text>
+          <line x1="100" y1="103" x2="160" y2="33" stroke="#8a2431" stroke-width="2"/>
+          <line x1="100" y1="103" x2="160" y2="103" stroke="#8a2431" stroke-width="2"/>
+          <line x1="100" y1="103" x2="160" y2="173" stroke="#8a2431" stroke-width="2"/>
+          <line x1="280" y1="33" x2="330" y2="95" stroke="#8a2431" stroke-width="2" stroke-dasharray="4 3"/>
+          <line x1="280" y1="103" x2="330" y2="103" stroke="#8a2431" stroke-width="2" stroke-dasharray="4 3"/>
+          <line x1="280" y1="173" x2="330" y2="111" stroke="#8a2431" stroke-width="2" stroke-dasharray="4 3"/>
+          <text x="230" y="205" text-anchor="middle" font-size="12" fill="#8a2431">three callers interpret the same shallow name</text>
+        </svg>
+      </div>
+      <div class="panel">
+        <h4>After</h4>
+        <svg viewBox="0 0 460 210" role="img" aria-label="After: one Backend module with a deep interface">
+          <rect x="150" y="76" width="160" height="62" rx="8" fill="#eef3ee" stroke="#1d5c45" stroke-width="2"/>
+          <text x="230" y="100" text-anchor="middle" font-size="14" font-weight="700">Backend</text>
+          <text x="230" y="120" text-anchor="middle" font-size="11">resolve · wrap · capabilities</text>
+          <rect x="10" y="10" width="105" height="42" rx="6" fill="#fff" stroke="#c9c5ba"/>
+          <text x="62" y="36" text-anchor="middle" font-size="12">Policy</text>
+          <rect x="10" y="84" width="105" height="42" rx="6" fill="#fff" stroke="#c9c5ba"/>
+          <text x="62" y="110" text-anchor="middle" font-size="12">Engine</text>
+          <rect x="10" y="158" width="105" height="42" rx="6" fill="#fff" stroke="#c9c5ba"/>
+          <text x="62" y="184" text-anchor="middle" font-size="12">ClaimVerifier</text>
+          <rect x="345" y="84" width="105" height="42" rx="6" fill="#fbfaf7" stroke="#c9c5ba"/>
+          <text x="397" y="110" text-anchor="middle" font-size="12">Receipt</text>
+          <line x1="115" y1="31" x2="150" y2="88" stroke="#1d5c45" stroke-width="2"/>
+          <line x1="115" y1="105" x2="150" y2="105" stroke="#1d5c45" stroke-width="2"/>
+          <line x1="115" y1="179" x2="150" y2="122" stroke="#1d5c45" stroke-width="2"/>
+          <line x1="310" y1="105" x2="345" y2="105" stroke="#1d5c45" stroke-width="2"/>
+          <text x="230" y="205" text-anchor="middle" font-size="12" fill="#1d5c45">one interface owns the seam</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <span class="badge worth">Worth exploring</span>
+    <h3>Candidate B — Fold output capture into a <code>Capture</code> adapter</h3>
+    <p><strong>Files.</strong> <code>engine.py</code> <code>_popen_run</code>, <code>_read_capped</code>, <code>redact.py</code>.</p>
+    <p><strong>Problem.</strong> Streaming capture and redaction are pure helpers extracted away from the call site. Locality is weak: a future change to the output cap has to be understood in three places.</p>
+    <p><strong>Solution.</strong> A <code>Capture</code> adapter would own subprocess streaming, hashing, truncation and redaction, and return one execution record.</p>
+    <p><strong>Benefits.</strong> Higher leverage for the <code>Engine.run</code> caller. <strong>Why not now.</strong> A second adapter would not yet be real: the deletion test says the complexity would move, not concentrate. Revisit when replay and run both need a second capture policy. Rejected in this pass to keep the change set small and the golden contract stable.</p>
+  </div>
+
+  <div class="card">
+    <span class="badge spec">Speculative</span>
+    <h3>Candidate C — Replace the CLI dispatch with a command registry</h3>
+    <p><strong>Files.</strong> <code>cli.py</code>.</p>
+    <p><strong>Problem.</strong> <code>main()</code> is wide: eleven branches over string commands.</p>
+    <p><strong>Solution.</strong> A registry of command objects with a uniform <code>run(args)</code> interface.</p>
+    <p><strong>Benefits.</strong> Cleaner addition of future commands. <strong>Why not now.</strong> It would widen the module without deepening it, and it puts twelve exit-code contracts behind a new seam for no current caller. Rejected.</p>
+  </div>
+
+  <h2>3. Deletion test and decision log</h2>
+  <table>
+    <tr><th>Candidate</th><th>Deletion test</th><th>Decision</th></tr>
+    <tr><td>A. Backend module</td><td>Deleting it concentrates four scattered decisions into one missing module. Depth increases.</td><td>Chosen. Strong.</td></tr>
+    <tr><td>B. Capture adapter</td><td>Deleting it moves streaming, hashing and redaction back into <code>Engine</code>. Complexity moves, not concentrates.</td><td>Deferred. Worth exploring.</td></tr>
+    <tr><td>C. CLI registry</td><td>Deleting it returns eleven branches to <code>main()</code>. Width, not depth.</td><td>Rejected. Speculative.</td></tr>
+  </table>
+  <div class="callout">
+    <strong>ADR check.</strong> ADR-0001 (default-deny, explicit backend disclosure) and ADR-0002 (no LLM judge) were read before the scan. Candidate A strengthens ADR-0001; neither B nor C conflicts with ADR-0002. No ADR was reopened.
+  </div>
+
+  <h2>4. Behavior preservation</h2>
+  <p>The architecture pass changed no observable behavior covered by the golden contract. The transcript in <code>tests/fixtures/golden_transcript.txt</code> was captured before the pass and compared after it.</p>
+  <pre>before: python3 -m unittest tests.test_golden -v  ->  Ran 1 test ... OK
+after:  python3 -m unittest tests.test_golden -v  ->  Ran 1 test ... OK
+full:   python3 -m unittest discover -s tests -t . -v  ->  Ran 142 tests ... OK
+demo:   python3 -m receipts demo  ->  PASS / DENY / UNVERIFIED, exit 0</pre>
+  <div class="callout warn">
+    <strong>Honest scope note.</strong> The <code>curl</code> denial reason text changed from "denied without an enforcing sandbox backend" to "denied by default-deny policy" in review round 7, a safety fix. That is not part of the architecture pass and is not covered by the golden transcript, which asserts the decision and reason count rather than the prose. No verdict, exit code, receipt field or filesystem delta changed during the architecture pass.
+  </div>
+
+  <h2>5. Top recommendation, restated</h2>
+  <p>Tackle Candidate A first. It is the recently changed hot spot, it removes a leaked seam across three modules, and it gives <code>Policy</code>, <code>Engine</code> and <code>ClaimVerifier</code> one deep interface with real leverage. Candidate B returns when a second capture adapter exists. Candidate C stays out until width becomes the actual problem.</p>
+</main>
+<footer>
+  Generated for the <code>improve-codebase-architecture</code> pass. Self-contained, offline, no CDN. Review rounds and re-run commands are in <code>docs/REVIEW_LOG.md</code>.
+</footer>
+</body>
+</html>
